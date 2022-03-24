@@ -1,0 +1,18 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file alias="brush.png">./icons/brush.png</file>
+    <file alias="brush_white.png">./icons/brush_white.png</file>
+    <file alias="eraser.png">./icons/eraser.png</file>
+    <file alias="eraser_white.png">./icons/eraser_white.png</file>
+    <file alias="line.png">./icons/line.png</file>
+    <file alias="line_white.png">./icons/line_white.png</file>
+    <file alias="palette.png">./icons/palette.png</file>
+    <file alias="palette_white.png">./icons/palette_white.png</file>
+    <file alias="pencil.png">./icons/pencil.png</file>
+    <file alias="pencil_white.png">./icons/pencil_white.png</file>
+    <file alias="increment.png">./icons/increment.png</file>
+    <file alias="increment_white.png">./icons/increment_white.png</file>
+    <file alias="decrement.png">./icons/decrement.png</file>
+    <file alias="decrement_white.png">./icons/decrement_white.png</file>
+</qresource>
+</RCC>
