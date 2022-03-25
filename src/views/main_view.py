@@ -40,17 +40,17 @@ class MainView(QMainWindow):
     def _create_actions(self):
         
         # MainView actions
-        self.undo_action = QtWidgets.QAction('Undo', self)
-        self.addAction(self.undo_action)
+        # self.undo_action = QtWidgets.QAction('Undo', self)
+        # self.addAction(self.undo_action)
 
-        self.redo_action = QtWidgets.QAction('Redo', self)
-        self.addAction(self.redo_action)
+        # self.redo_action = QtWidgets.QAction('Redo', self)
+        # self.addAction(self.redo_action)
 
-        self.delete_action = QtWidgets.QAction('Delete', self)
-        self.addAction(self.delete_action)
+        # self.delete_action = QtWidgets.QAction('Delete', self)
+        # self.addAction(self.delete_action)
 
-        self.group_action = QtWidgets.QAction('Group', self)
-        self.addAction(self.group_action)
+        # self.group_action = QtWidgets.QAction('Group', self)
+        # self.addAction(self.group_action)
 
         self.increase_size_action = QtWidgets.QAction('Increase Size', self)
         self.addAction(self.increase_size_action)
@@ -76,6 +76,7 @@ class MainView(QMainWindow):
     def _make_connections(self):
         self._ui.export_action.triggered.connect(lambda: self._ui.paint_scene.save_img())
         self._ui.clear_all_action.triggered.connect(lambda: self._ui.paint_scene.clear())
+        self._ui.preference_action.triggered.connect(lambda: self._ui.preference_view.show_event(self.geometry().center()))
         self._ui.run_action.triggered.connect(lambda: self._model.run(self._ui.paint_scene.get_img()))
         self._ui.run_btn.clicked.connect(lambda: self._model.run(self._ui.paint_scene.get_img()))
 
@@ -136,9 +137,6 @@ class MainView(QMainWindow):
         self._update_brush_ui()
 
     def update_pen_color(self):
-        # color = self._ui.color_dialog.getColor(self._ui.paint_scene.pen_color,
-        #                                    self, "Color",
-        #                                    QtWidgets.QColorDialog.ShowAlphaChannel)
         color = self._ui.color_dialog.getColor(options=QtWidgets.QColorDialog.ShowAlphaChannel)
         self._ui.paint_scene.set_pen_color(color)
 
@@ -157,6 +155,7 @@ class MainView(QMainWindow):
         """Shuts down application on close."""
         # Return standard output to defaults.
         sys.stdout = sys.__stdout__
+        self._ui.preference_view.close()
         super().closeEvent(event)
 
     def _dark_mode(self):

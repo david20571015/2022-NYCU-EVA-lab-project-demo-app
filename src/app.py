@@ -10,6 +10,7 @@ def parse_args_and_config():
     parser.add_argument('--canvas', type=int, default=4, help="number of canvas")
     parser.add_argument('--width', type=int, default=256, help="width of input image")
     parser.add_argument('--height', type=int, default=256, help="height of input image")
+    parser.add_argument('-i', type=str, default="true", help="infer all combinations of input")
     args = parser.parse_args()
     return args
 

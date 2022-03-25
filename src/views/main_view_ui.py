@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from views.paint_panel import PaintPanel
+from views.preference_view import PreferenceView
 
 from resources import icons
 
@@ -11,8 +12,8 @@ class Ui_MainWindow(object):
 
         # Get monitor resolution
         self.screen_size = QtWidgets.QDesktopWidget().screenGeometry(-1)
-        MainWindow.setGeometry((int)(self.screen_size.width()*.1), (int)(self.screen_size.height()*.1), 
-            (int)(self.screen_size.width()*.8), (int)(self.screen_size.height()*.8))
+        MainWindow.setGeometry((int)(self.screen_size.width()*.2), (int)(self.screen_size.height()*.2), 
+            (int)(self.screen_size.width()*.6), (int)(self.screen_size.height()*.6))
 
         # Workspace layout
         self.main_splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -34,6 +35,7 @@ class Ui_MainWindow(object):
 
         # TODO: ddim panel, or you can create your QWidget
         self.ddim_panel = QtWidgets.QWidget()
+        self.ddim_panel.setMinimumHeight(200)
         self.ddim_layout = QtWidgets.QHBoxLayout()
         self.ddim_panel.setLayout(self.ddim_layout)
 
@@ -59,6 +61,7 @@ class Ui_MainWindow(object):
 
         # Adding menu options
         self.file_menu = self.main_menu.addMenu("File")
+        self.edit_menu = self.main_menu.addMenu("Edit")
         self.run_menu = self.main_menu.addMenu("Run")
         MainWindow.setMenuBar(self.main_menu)
 
@@ -74,6 +77,11 @@ class Ui_MainWindow(object):
         # creating clear option
         self.clear_all_action = QtWidgets.QAction("&Clear all")
         self.file_menu.addAction(self.clear_all_action)
+
+        # creating preference option
+        self.preference_action = QtWidgets.QAction("Preference")
+        self.edit_menu.addAction(self.preference_action)
+        self.preference_view = PreferenceView(args)
 
         # creating run option
         self.run_action = QtWidgets.QAction("&Run")
@@ -100,7 +108,7 @@ class Ui_MainWindow(object):
         self.edit_tool_bar.addAction(self.increment_action)
 
         self.size_slider = QtWidgets.QSlider(Qt.Vertical)
-        self.size_slider.setRange(1, 250)
+        self.size_slider.setRange(20, 250)
         self.size_slider.setValue(30)
         self.size_slider.setTickInterval(10)
         self.size_slider.setSingleStep(10)
