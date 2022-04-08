@@ -1,8 +1,8 @@
 import torch
-# from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal
 
-from diffusion import Diffusion
-from blending import Blending
+from .diffusion import Diffusion
+from .blending import Blending
 
 
 class Model(QObject):
@@ -18,15 +18,22 @@ class Model(QObject):
         self.diffusion_model = Diffusion()
         self.blending_model = Blending(skip=[0, 1, 2, 3, 4],
                                        attention=[1]).to(self.device)
+        import os.path
+        blending_weighits_path = os.path.join(os.path.dirname(__file__),
+                                              './blending/weights/Gen_85.pth')
+        self.blending_model.load_state_dict(torch.load(blending_weighits_path))
+
+    # TODO: ddim and image_blending
+    def run(self, images):
+        pass
 
     # TODO: diffusion
     def diffusion(self, images):
         # [batch_size, 3, 256, 256]
         return self.diffusion_model.inference(images)
 
-    # TODO: ddim and image_blending
-    def run(self, images):
-        pass
+        # [batch_size, 3, 256, 256]
+        # return self.diffusion_model.inference(images).numpy()
 
     # TODO: image_blending
     def image_blending(self, left_image, right_image):
@@ -36,4 +43,8 @@ class Model(QObject):
 
         pred_image, *_ = self.blending_model(left_image, right_image)
 
-        return pred_image
+        # [3, 256, 768]
+        return pred_image.squeeze()
+
+        # [3, 256, 768]
+        # return pred_image.squeeze().numpy()
