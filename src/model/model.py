@@ -20,7 +20,7 @@ class Model(QObject):
                                        attention=[1]).to(self.device)
         import os.path
         blending_weighits_path = os.path.join(os.path.dirname(__file__),
-                                              './blending/weights/Gen_85.pth')
+                                              './blending/weights/Gen_100')
         self.blending_model.load_state_dict(torch.load(blending_weighits_path))
 
     # TODO: ddim and image_blending
@@ -30,21 +30,33 @@ class Model(QObject):
     # TODO: diffusion
     def diffusion(self, images):
         # [batch_size, 3, 256, 256]
-        return self.diffusion_model.inference(images)
+        return self.diffusion_model.inference(images,
+                                              sample_step=2,
+                                              total_noise_levels=300)
 
         # [batch_size, 3, 256, 256]
-        # return self.diffusion_model.inference(images).numpy()
+        # return self.diffusion_model.inference(images, sample_step=2, total_noise_levels=300).numpy()
 
     # TODO: image_blending
-    def image_blending(self, left_image, right_image):
-        # [1, 3, 256, 256], [1, 3, 256, 256]
-        # left_image = torch.Tensor(left_image).to(self.device)
-        # right_image = torch.Tensor(right_image).to(self.device)
+    def image_blending(self, images):
+        # images is a list which contains images with shape [1, 3, 256, 256]
+        # image = torch.Tensor(image).to(self.device)
 
-        pred_image, *_ = self.blending_model(left_image, right_image)
+        if len(images) < 2:
+            return images
 
-        # [3, 256, 768]
-        return pred_image.squeeze()
+        image_list = []
 
-        # [3, 256, 768]
-        # return pred_image.squeeze().numpy()
+        for left_image, right_image in zip(images[:-1], images[1:]):
+            image_list.append(left_image)
+            pred_image, *_ = self.blending_model(left_image, right_image)
+            _, mid_image, _ = torch.chunk(pred_image, 3, dim=-1)
+            image_list.append(mid_image)
+
+        image_list.append(images[-1])
+
+        # [2 * batch_size - 1, 256, 256]
+        return torch.cat(image_list, 0)
+
+        # [2 * batch_size - 1, 256, 256]
+        # return torch.cat(image_list, 0).numpy()
