@@ -1,6 +1,5 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView, QUndoCommand
-from layers import Layer, Folder
 
 class PaintScene(QGraphicsScene):
     """
@@ -58,10 +57,10 @@ class PaintScene(QGraphicsScene):
         self.paint_layout = QtWidgets.QHBoxLayout()
         border = QtGui.QPen()
         border.setWidthF(1)
-        border.setColor(QtGui.QColor(255, 255, 255, 255))
+        border.setColor(QtGui.QColor(0, 0, 0, 0))
         
         self.addRect(0, 0, self.width, self.height, border, QtGui.QBrush(
-            QtGui.QColor(255, 255, 255, 255), QtCore.Qt.SolidPattern))
+            QtGui.QColor(255, 255, 255, 255)))
 
         # cursor preview
         pen = QtGui.QPen(QtGui.QColor(0, 0, 0, 255), .5,

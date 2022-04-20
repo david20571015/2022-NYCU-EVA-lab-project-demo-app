@@ -1,11 +1,14 @@
+import os
+import sys
+import torch
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from torchvision.utils import save_image
+from PIL import Image
 from views.main_view_ui import Ui_MainWindow
-from layers import LayerPanel
-from delegate import TreeDelegate
 
-import sys
 
 class Stream(QObject):
     newText = pyqtSignal(str)
@@ -16,6 +19,8 @@ class Stream(QObject):
 class MainView(QMainWindow):
     def __init__(self, args, model, main_controller):
         super().__init__()
+        self.args = args
+        self.export_dir = os.path.join("result", self.args.name)
 
         # Set app color
         self._dark_mode()
@@ -23,10 +28,8 @@ class MainView(QMainWindow):
         # Combine model, view, and controller
         self._model = model
         self._main_controller = main_controller
-        self.layers_tree = LayerPanel(dragToggleColumns=[0], columns=['', ''])
-        self.layers_tree.setItemDelegate(TreeDelegate())
         self._ui = Ui_MainWindow()
-        self._ui.setupUi(self, args)
+        self._ui.setupUi(self, self.args)
 
         self._create_actions()
         self._make_shortcut()
@@ -34,24 +37,16 @@ class MainView(QMainWindow):
 
         self._ui.paint_scene.hide_pen_preview()
 
+        self.blending_path = []
         # console panel output
         # sys.stdout = Stream(newText=self.onUpdateText)
+        isExist = os.path.exists(self.export_dir)
+        if not isExist:
+            # Create a new directory because it does not exist 
+            os.makedirs(self.export_dir)
 
-    def _create_actions(self):
-        
+    def _create_actions(self):      
         # MainView actions
-        # self.undo_action = QtWidgets.QAction('Undo', self)
-        # self.addAction(self.undo_action)
-
-        # self.redo_action = QtWidgets.QAction('Redo', self)
-        # self.addAction(self.redo_action)
-
-        # self.delete_action = QtWidgets.QAction('Delete', self)
-        # self.addAction(self.delete_action)
-
-        # self.group_action = QtWidgets.QAction('Group', self)
-        # self.addAction(self.group_action)
-
         self.increase_size_action = QtWidgets.QAction('Increase Size', self)
         self.addAction(self.increase_size_action)
 
@@ -66,29 +61,23 @@ class MainView(QMainWindow):
         self._ui.run_action.setShortcut("Ctrl + R")
         
         # MainView shortcuts
-        # self.undo_action.setShortcut('Ctrl+Z')
-        # self.redo_action.setShortcut('Shift+Ctrl+Z')
-        # self.delete_action.setShortcut('Backspace')
-        # self.group_action.setShortcut('Ctrl+G')
         self.increase_size_action.setShortcut(']')
         self.decrease_size_action.setShortcut('[')
 
     def _make_connections(self):
-        self._ui.export_action.triggered.connect(lambda: self._ui.paint_scene.save_img())
+        self._ui.export_action.triggered.connect(lambda: self.save_img())
         self._ui.clear_all_action.triggered.connect(lambda: self._ui.paint_scene.clear())
         self._ui.preference_action.triggered.connect(lambda: self._ui.preference_view.show_event(self.geometry().center()))
-        self._ui.run_action.triggered.connect(lambda: self._model.run(self._ui.paint_scene.get_img()))
-        self._ui.run_btn.clicked.connect(lambda: self._model.run(self._ui.paint_scene.get_img()))
+        self._ui.run_action.triggered.connect(lambda: self.run_model())
+        self._ui.run_btn.clicked.connect(lambda: self.run_model())
 
-        self._model.ddim_update.connect(self.ddim_changed)
-        self._model.image_blending_update.connect(self.image_blending_changed)
+        self._model.ddim_changed.connect(self.ddim_update)
+        self._model.image_blending_changed.connect(self.image_blending_update)
+        self._model.finished.connect(self.exit_model)
 
         self._ui.brush_action.triggered.connect(lambda: self._ui.paint_scene.choose_brush())
-        # self._ui.line_action.triggered.connect(lambda: self._ui.paint_scene.choose_line())
         self._ui.eraser_action.triggered.connect(lambda: self._ui.paint_scene.choose_eraser())
 
-        # self._ui.paint_scene.strokeAdded_connect(self.create_layer_item)
-        # self._ui.paint_scene.strokeRemoved_connect(self.remove_layer_item)
         self._ui.paint_scene.brushChanged_connect(self._update_brush_ui)
         self._ui.palette_action.triggered.connect(self.update_pen_color)
 
@@ -97,21 +86,79 @@ class MainView(QMainWindow):
 
         self._ui.size_slider.valueChanged.connect(lambda: self.set_pen_size(self._ui.size_slider.value()))
         
-        # self.delete_action.triggered.connect(self.delete_layer)
-        # self.group_action.triggered.connect(self.group_layers)
+    def save_img(self):
+        # check data is exist
+        if len(self.blending_path) <= 1 :
+            return
 
-        # self.layers_tree.itemChanged.connect(self.layer_change)
-        # self.layers_tree.layerOrderChanged.connect(self.update_layer_index)
+        # open buffer images
+        imgs = []
+        for path in self.blending_path:
+            imgs.append(Image.open(path))
 
-    # TODO:
-    @pyqtSlot(list)
-    def ddim_changed(self, imgs):
-        pass
+        # concate images
+        result = self.get_concat_h(imgs[0], imgs[1])
+        for i in range(2, len(imgs)):
+            result = self.get_concat_h(result, imgs[i])
 
-    # TODO:
-    @pyqtSlot(list)
-    def image_blending_changed(self, imgs):
-        pass
+        # save strip image
+        save_path = os.path.join(self.export_dir, "result.png")
+        result.save(save_path)
+
+        # form a circle with first image
+        for i in range(self.args.out_width):
+            result = self.get_concat_h(result, imgs[i%(self.args.canvas*2)])
+        width = imgs[0].width * self.args.out_width
+        height = imgs[0].height
+
+        # save gif
+        gif_buffer = []
+        for i in range(0, result.width-width, 5):
+            buffer = Image.new('RGB', (width , height))
+            region = result.crop((i, 0, i+width, height))
+            buffer.paste(region, (0, 0))
+            gif_buffer.append(buffer)
+
+        gif_path = os.path.join(self.export_dir, "result.gif")
+        gif_buffer[0].save(fp=gif_path, format='GIF', append_images=gif_buffer[1:],
+            save_all=True, duration=self.args.duration, loop=0)
+
+    def get_concat_h(self, im1, im2):
+        dst = Image.new('RGB', (im1.width + im2.width, im1.height))
+        dst.paste(im1, (0, 0))
+        dst.paste(im2, (im1.width, 0))
+        return dst
+
+    def run_model(self):
+        self.blending_path.clear()
+        strokes = self._ui.paint_scene.get_img()
+        for id, img in enumerate(strokes):
+            save_path = os.path.join(self.export_dir, "stroke_"+str(id)+".png")
+            img.save(save_path)
+
+        self._model.set_strokes(strokes)
+        self._ui.run_btn.setDisabled(True)
+        self._model.start()
+
+    def exit_model(self):
+        self._ui.run_btn.setDisabled(False)
+
+    @pyqtSlot(str, int, torch.Tensor)
+    def ddim_update(self, src, id, imgs_tensor):
+        save_path = os.path.join(self.export_dir, src+str(id)+".png")
+        save_image(imgs_tensor, save_path)
+        pim = QPixmap(save_path)
+        
+        self._ui.ddim_scene.labels[id].setPixmap(pim)
+        
+    @pyqtSlot(str, int, torch.Tensor)
+    def image_blending_update(self, src, id, imgs_tensor):
+        save_path = os.path.join(self.export_dir, src+str(id)+".png")
+        save_image(imgs_tensor, save_path)
+        pim = QPixmap(save_path)
+        self.blending_path.append(save_path)
+
+        self._ui.blending_scene.labels[id].setPixmap(pim)   
 
     def _update_brush_ui(self):
         self._ui.size_slider.setValue(self._ui.paint_scene.pen_size)
@@ -179,165 +226,3 @@ class MainView(QMainWindow):
         dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
         dark_palette.setColor(QPalette.HighlightedText, Qt.black)
         self.setPalette(dark_palette)
-
-    # def create_layer_item(self, stroke_id, layer_name):
-    #     """
-    #     Creates layer item in layer panel using stroke data
-
-    #     Args:
-    #         stroke_id (int): unique index of stroke
-    #         layer_name (str): name of stroke layer
-
-    #     """
-    #     stroke_info = ['', layer_name]
-    #     layer = Layer(stroke_info, stroke_index=stroke_id)
-
-    #     highest_group = None
-    #     if self.layers_tree.selectedItems():
-    #         iterator = QtWidgets.QTreeWidgetItemIterator(self.layers_tree)
-    #         while iterator.value():
-    #             item = iterator.value()
-    #             if isinstance(item, Folder) and item in self.layers_tree.selectedItems():
-    #                 highest_group = item
-    #                 break
-    #             iterator += 1
-    #     if highest_group:
-    #         highest_group.insertChild(0, layer)
-    #     else:
-    #         self.layers_tree.insertTopLevelItem(0, layer)
-    #     self.update_layer_index()
-
-    # def remove_layer_item(self, stroke_id):
-    #     """
-    #     deletes layer item in layer panel
-
-    #     Args:
-    #         stroke_id (int): unique index of stroke to be removed
-
-    #     """
-    #     iterator = QtWidgets.QTreeWidgetItemIterator(self.layers_tree)
-
-    #     while iterator.value():
-    #         item = iterator.value()
-    #         if isinstance(item, Layer):
-    #             layer_data = item.data(1, QtCore.Qt.UserRole)[0]
-    #             if layer_data['stroke_index'] == stroke_id:
-    #                 parent = item.parent()
-    #                 if parent:
-    #                     idx = parent.indexOfChild(item)
-    #                     parent.takeChild(idx)
-    #                 else:
-    #                     idx = self.layers_tree.indexOfTopLevelItem(item)
-    #                     self.layers_tree.takeTopLevelItem(idx)
-    #         if isinstance(item, Folder):
-    #             layer_data = item.data(1, QtCore.Qt.UserRole)[0]
-
-    #             if item.group_index == stroke_id:
-    #                 parent = item.parent()
-    #                 if parent:
-    #                     idx = parent.indexOfChild(item)
-    #                     parent.takeChild(idx)
-    #                 else:
-    #                     idx = self.layers_tree.indexOfTopLevelItem(item)
-    #                     self.layers_tree.takeTopLevelItem(idx)
-    #         iterator += 1
-
-    # def layer_change(self, item, column):
-    #     """
-    #     updates stroke information, used when updating visibility or layer name
-
-    #     Args:
-    #         item (QTreeWidgetItem): item associated with stroke
-    #         column (int): column to change
-    #     """
-    #     if column == 0:
-    #         if isinstance(item, Layer):
-    #             self._ui.paint_scene.toggle_layer_visibility(item.stroke_index,
-    #                                                      item.visible)
-
-    #         elif isinstance(item, Folder):
-    #             for i in range(item.childCount()):
-    #                 if item.visible is True:
-    #                     item.child(i).setFlags(QtCore.Qt.ItemIsSelectable |
-    #                                            QtCore.Qt.ItemIsEditable |
-    #                                            QtCore.Qt.ItemIsEnabled |
-    #                                            QtCore.Qt.ItemIsDragEnabled)
-    #                 else:
-    #                     item.child(i).setFlags(QtCore.Qt.NoItemFlags)
-    #                 self._ui.paint_scene.toggle_layer_visibility(item.child(i).stroke_index, item.visible)
-
-    #     elif column == 1:
-    #         if isinstance(item, Layer):
-    #             self._ui.paint_scene.update_layer_name(item.stroke_index,
-    #                                                item.text(1))
-
-    # def delete_layer(self):
-    #     """
-    #     Deletes selected layers
-    #     """
-    #     for item in self.layers_tree.selectedItems():
-    #         # remove item.stroke_index
-    #         if isinstance(item, Layer):
-    #             if item.parent():
-    #                 command = DeleteStroke(self, item, group=item.parent())
-    #                 self._ui.paint_scene.undo_stack.push(command)
-    #             else:
-    #                 command = DeleteStroke(self, item)
-    #                 self._ui.paint_scene.undo_stack.push(command)
-
-    #         if isinstance(item, Folder):
-    #             command = DeleteGroup(self, item)
-    #             self._ui.paint_scene.undo_stack.push(command)
-
-    # def group_layers(self):
-    #     """
-    #     groups seleted layers
-
-    #     """
-    #     if self.layers_tree.selectedItems():
-    #         grab_items = []
-    #         for item in self.layers_tree.selectedItems():
-    #             if isinstance(item, Layer):
-    #                 grab_items.append(item.stroke_index)
-
-    #         command = GroupStrokes(self, grab_items)
-    #         self._ui.paint_scene.undo_stack.push(command)
-
-    # def update_layer_index(self):
-    #     """
-    #     iterates through layer panel & updates stacking order of strokes
-
-    #     """
-    #     iterator = QtWidgets.QTreeWidgetItemIterator(self.layers_tree)
-    #     while iterator.value():
-    #         item = iterator.value()
-    #         target_index = self.layers_tree.indexFromItem(item).row()
-    #         try:
-    #             new_indx = len(self._ui.paint_scene.strokes) - target_index
-    #             self._ui.paint_scene.set_stroke_zindex(item._stroke_index, new_indx)
-    #         except AttributeError:
-    #             pass
-
-    #         if isinstance(item, Layer):
-    #             # layer_data = item.data(1, QtCore.Qt.UserRole)[0]
-    #             layer_data = item.data(1, QtCore.Qt.UserRole)[0]
-    #             parent = item.parent()
-    #             if not parent:
-    #                 layer_data['layerType'] = 0
-    #             else:
-    #                 layer_data['layerType'] = 2
-
-    #             varient = QtCore.QVariant((layer_data,))
-    #             item.setData(1, QtCore.Qt.UserRole, varient)
-
-    #         elif isinstance(item, Folder):
-    #             for i in range(item.childCount()):
-    #                 if item.visible is True:
-    #                     item.child(i).setFlags(QtCore.Qt.ItemIsSelectable |
-    #                                            QtCore.Qt.ItemIsEditable |
-    #                                            QtCore.Qt.ItemIsEnabled |
-    #                                            QtCore.Qt.ItemIsDragEnabled)
-    #                 else:
-    #                     item.child(i).setFlags(QtCore.Qt.NoItemFlags)
-    #                 self._ui.paint_scene.toggle_layer_visibility(item.child(i).stroke_index, item.visible)
-    #         iterator += 1
