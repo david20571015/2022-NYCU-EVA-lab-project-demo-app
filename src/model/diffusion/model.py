@@ -1,9 +1,9 @@
 import math
-
 import numpy as np
 import torch
 import torch.nn as nn
 import yaml
+from multiprocessing import Process
 
 from .utils import (dict2namespace, get_beta_schedule,
                     image_editing_denoising_step_flexible_mask)
@@ -367,12 +367,14 @@ class Diffusion():
     def __init__(self,
                  weighits_path='./weights/ckpt.pth',
                  config_path='./scenery6000.yml'):
+        
         import os.path
         weighits_path = os.path.join(os.path.dirname(__file__), weighits_path)
         config_path = os.path.join(os.path.dirname(__file__), config_path)
 
         with open(config_path, "r") as f:
             self.config = dict2namespace(yaml.safe_load(f))
+
         model = Model(self.config)
         model = torch.nn.DataParallel(model)
 
@@ -394,7 +396,7 @@ class Diffusion():
         )
         self.betas = torch.from_numpy(betas).float().to(self.device)
 
-        # self.num_timesteps = betas.shape[0]
+        self.num_timesteps = betas.shape[0]
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
         alphas_cumprod_prev = np.append(1.0, alphas_cumprod[:-1])
@@ -404,7 +406,7 @@ class Diffusion():
 
     def inference(self,
                   images: torch.Tensor,
-                  sample_step=2,
+                  sample_step=1,
                   total_noise_levels=300):
         """Transfers the style of iamges from hand painted images to real world.
 

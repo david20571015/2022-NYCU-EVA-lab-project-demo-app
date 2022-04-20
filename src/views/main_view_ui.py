@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
-
+from PyQt5 import QtGui
+from views.ddim_panel import DDIMPanel
+from views.blending_panel import BlendingPanel
 from views.paint_panel import PaintPanel
 from views.preference_view import PreferenceView
 
@@ -12,35 +14,60 @@ class Ui_MainWindow(object):
 
         # Get monitor resolution
         self.screen_size = QtWidgets.QDesktopWidget().screenGeometry(-1)
-        MainWindow.setGeometry((int)(self.screen_size.width()*.2), (int)(self.screen_size.height()*.2), 
-            (int)(self.screen_size.width()*.6), (int)(self.screen_size.height()*.6))
+        MainWindow.setGeometry((int)(self.screen_size.width()*.2), (int)(self.screen_size.height()*.1), 
+            (int)(self.screen_size.width()*.6), (int)(self.screen_size.height()*.8))
 
         # Workspace layout
         self.main_splitter = QtWidgets.QSplitter(Qt.Vertical)
         MainWindow.setCentralWidget(self.main_splitter)
 
-        # paint panel
+        # section -- paint panel 
+        self.paint_label = QtWidgets.QLabel("Paint Panel")
+        self.paint_label.setAlignment(Qt.AlignCenter)
+        self.paint_label.setFont(QtGui.QFont("AnyStyle", 24))
+        # paint scene
         self.paint_scene = PaintPanel(args.canvas, args.width, args.height)
-
-        # run button
+        # paint panel run button
         self.run_btn = QtWidgets.QPushButton("Run")
-        self.run_btn.setFont(QtGui.QFont("AnyStyle", 24))
-
-        # paint panel layout
+        self.run_btn.setFont(QtGui.QFont("AnyStyle", 18))
+        # paint panel 
         self.paint_panel = QtWidgets.QWidget()
+        # paint panel layout
         self.paint_layout = QtWidgets.QVBoxLayout()
         self.paint_panel.setLayout(self.paint_layout)
+        self.paint_layout.addWidget(self.paint_label)
         self.paint_layout.addWidget(self.paint_scene)
         self.paint_layout.addWidget(self.run_btn)
 
-        # TODO: ddim panel, or you can create your QWidget
+        # ddim panel, or you can create your QWidget
+        # section -- ddim panel 
+        self.ddim_label = QtWidgets.QLabel("Diffusion Results")
+        self.ddim_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+        self.ddim_label.setFont(QtGui.QFont("AnyStyle", 24))
+        # ddim scene
+        self.ddim_scene = DDIMPanel(args.canvas, args.width, args.height)
+        # ddim panel 
         self.ddim_panel = QtWidgets.QWidget()
-        self.ddim_panel.setMinimumHeight(200)
-        self.ddim_layout = QtWidgets.QHBoxLayout()
+        # ddim panel layout
+        self.ddim_layout = QtWidgets.QVBoxLayout()
         self.ddim_panel.setLayout(self.ddim_layout)
+        self.ddim_layout.addWidget(self.ddim_label)
+        self.ddim_layout.addWidget(self.ddim_scene)
 
-        # TODO: image_blending panel, or you can create your QWidget
-        self.image_blending_panel = QtWidgets.QWidget()
+        # image_blending panel, or you can create your QWidget
+        # section -- blending panel 
+        self.blending_label = QtWidgets.QLabel("Blending Results")
+        self.blending_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+        self.blending_label.setFont(QtGui.QFont("AnyStyle", 24))
+        # blending scene
+        self.blending_scene = BlendingPanel()
+        # blending panel 
+        self.blending_panel = QtWidgets.QWidget()
+        # blending panel layout
+        self.blending_layout = QtWidgets.QVBoxLayout()
+        self.blending_panel.setLayout(self.blending_layout)
+        self.blending_layout.addWidget(self.blending_label)
+        self.blending_layout.addWidget(self.blending_scene)
 
         # console panel
         # self.process = QtWidgets.QTextEdit()
@@ -50,10 +77,10 @@ class Ui_MainWindow(object):
         # self.process.setLineWrapColumnOrWidth(500)
         # self.process.setLineWrapMode(QtWidgets.QTextEdit.FixedPixelWidth)
 
-        # TODO: add ddim panel and image_blending panel(sample code)
+        # add ddim panel and image_blending panel(sample code)
         self.main_splitter.addWidget(self.paint_panel)
         self.main_splitter.addWidget(self.ddim_panel)
-        self.main_splitter.addWidget(self.image_blending_panel)
+        self.main_splitter.addWidget(self.blending_panel)
         # self.main_splitter.addWidget(self.process)
 
         # creating menu bar
@@ -94,10 +121,6 @@ class Ui_MainWindow(object):
         # creating edit option -- palette
         self.palette_action = QtWidgets.QAction(QtGui.QIcon(":palette_white.png"), "&Palette")
         self.edit_tool_bar.addAction(self.palette_action)
-
-        # creating edit option -- line
-        # self.line_action = QtWidgets.QAction(QtGui.QIcon(":line_white.png"), "&Line")
-        # self.edit_tool_bar.addAction(self.line_action)
 
         # creating edit option -- eraser
         self.eraser_action = QtWidgets.QAction(QtGui.QIcon(":eraser_white.png"), "&Eraser")
