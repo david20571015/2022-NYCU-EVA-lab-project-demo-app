@@ -72,7 +72,7 @@ class Model(QThread):
         return result_image
 
         # [batch_size, 3, 256, 256]
-        # return self.diffusion_model.inference(images).numpy()
+        # return self.diffusion_model.inference(images, sample_step=2, total_noise_levels=300).numpy()
 
     # image_blending
     def image_blending(self, left_image, right_image):
