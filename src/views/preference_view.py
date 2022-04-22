@@ -22,7 +22,7 @@ class PreferenceView(QWidget):
         self.gpu_label = QtWidgets.QLabel("GPU")
         self.gpu_label.setAlignment(QtCore.Qt.AlignTop|QtCore.Qt.AlignHCenter)
         self.main_layout.addWidget(self.gpu_label)
-        # REFERENCE: more gpu options
+        # more gpu options
         # GPU options
 
         # save button

@@ -2,9 +2,10 @@ import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
 from torchvision.utils import save_image
+import pathlib
 
 from model import Model
-
+dir = str(pathlib.Path(__file__).parent.resolve())
 model = Model()
 
 with Image.open('./model/img1.png') as image1, \
@@ -28,3 +29,4 @@ save_image(diffusion_image, './model/diffusion_image.png')
 blending_image = model.image_blending(torch.split(diffusion_image, 1))
 print(f'blending_image.shape: {blending_image.shape}')  # [5, 3, 256, 256]
 save_image(blending_image, './model/blending_image.png')
+

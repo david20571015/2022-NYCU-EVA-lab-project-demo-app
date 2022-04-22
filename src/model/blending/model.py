@@ -611,7 +611,6 @@ class Generator(nn.Module):
                  skip=[0, 1, 2, 3, 4],
                  attention=[0, 1, 2, 3, 4]):
         # --PARAMS--
-        # skip: indicates the layers with skip connection
         # attention: indicates skip connections where the attention mechanism is applied
 
         super(Generator, self).__init__()
