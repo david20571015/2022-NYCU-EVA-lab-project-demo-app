@@ -30,10 +30,10 @@ class Model(QObject):
     # TODO: diffusion
     def diffusion(self, images):
         # [batch_size, 3, 256, 256]
-        return self.diffusion_model.inference(images,
-                                              sample_step=2,
-                                              total_noise_levels=300)
-
+        diffusion_image = self.diffusion_model.inference(images,
+                                                         sample_step=2,
+                                                         total_noise_levels=300)
+        return (diffusion_image + 1) * 0.5
         # [batch_size, 3, 256, 256]
         # return self.diffusion_model.inference(images, sample_step=2, total_noise_levels=300).numpy()
 
