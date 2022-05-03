@@ -2,7 +2,7 @@ import os
 import sys
 import torch
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QMovie
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from torchvision.utils import save_image
@@ -65,7 +65,7 @@ class MainView(QMainWindow):
         self.decrease_size_action.setShortcut('[')
 
     def _make_connections(self):
-        self._ui.export_action.triggered.connect(lambda: self.save_img())
+        self._ui.export_action.triggered.connect(lambda: self.save_img("result", 5))
         self._ui.clear_all_action.triggered.connect(lambda: self._ui.paint_scene.clear())
         self._ui.preference_action.triggered.connect(lambda: self._ui.preference_view.show_event(self.geometry().center()))
         self._ui.run_action.triggered.connect(lambda: self.run_model())
@@ -86,7 +86,7 @@ class MainView(QMainWindow):
 
         self._ui.size_slider.valueChanged.connect(lambda: self.set_pen_size(self._ui.size_slider.value()))
         
-    def save_img(self):
+    def save_img(self, name, step):
         # check data is exist
         if len(self.blending_path) <= 1 :
             return
@@ -102,7 +102,7 @@ class MainView(QMainWindow):
             result = self.get_concat_h(result, imgs[i])
 
         # save strip image
-        save_path = os.path.join(self.export_dir, "result.png")
+        save_path = os.path.join(self.export_dir, name+".png")
         result.save(save_path)
 
         # form a circle with first image
@@ -113,15 +113,46 @@ class MainView(QMainWindow):
 
         # save gif
         gif_buffer = []
-        for i in range(0, result.width-width, 5):
+        for i in range(0, result.width-width, step):
             buffer = Image.new('RGB', (width , height))
             region = result.crop((i, 0, i+width, height))
             buffer.paste(region, (0, 0))
             gif_buffer.append(buffer)
 
-        gif_path = os.path.join(self.export_dir, "result.gif")
+        gif_path = os.path.join(self.export_dir, name+".gif")
         gif_buffer[0].save(fp=gif_path, format='GIF', append_images=gif_buffer[1:],
             save_all=True, duration=self.args.duration, loop=0)
+    def demo_gif(self):
+        # check data is exist
+        if len(self.blending_path) <= 1 :
+            return
+
+        # open buffer images
+        imgs = []
+        for path in self.blending_path:
+            imgs.append(Image.open(path))
+
+        # concate images
+        result = self.get_concat_h(imgs[0], imgs[1])
+        for i in range(2, len(imgs)):
+            result = self.get_concat_h(result, imgs[i])
+        # form a circle with first image
+        for i in range(self.args.out_width):
+            result = self.get_concat_h(result, imgs[i%(self.args.canvas*2)])
+        width = imgs[0].width * self.args.out_width
+        height = imgs[0].height
+
+        # save gif
+        gif_buffer = []
+        for i in range(0, result.width-width, 20):
+            buffer = Image.new('RGB', (width , height))
+            region = result.crop((i, 0, i+width, height))
+            buffer.paste(region, (0, 0))
+            gif_buffer.append(buffer)
+
+        gif_path = os.path.join(self.export_dir, "tmp.gif")
+        gif_buffer[0].save(fp=gif_path, format='GIF', append_images=gif_buffer[1:],
+            save_all=True, duration=self.args.duration*4, loop=0)
 
     def get_concat_h(self, im1, im2):
         dst = Image.new('RGB', (im1.width + im2.width, im1.height))
@@ -139,26 +170,42 @@ class MainView(QMainWindow):
         self._model.set_strokes(strokes)
         self._ui.run_btn.setDisabled(True)
         self._model.start()
+        self._ui.run_btn.setText("Infer ddim 1 ...")
 
     def exit_model(self):
+        import threading
+        self.view_thread = threading.Thread(target = self.demo_gif())
+        self.view_thread.start()
+        self.view_thread.join()
+        gif = QMovie(self.export_dir+ "/tmp.gif")
+        self._ui.blending_scene.labels.setMovie(gif)
+        gif.start()
         self._ui.run_btn.setDisabled(False)
+        self._ui.run_btn.setText("Run")
 
     @pyqtSlot(str, int, torch.Tensor)
     def ddim_update(self, src, id, imgs_tensor):
+        if id < self.args.canvas-1:
+            self._ui.run_btn.setText("Infer ddim "+str(id+2)+" ...")
+        else:
+            self._ui.run_btn.setText("Infer blending ...")
+
         save_path = os.path.join(self.export_dir, src+str(id)+".png")
         save_image(imgs_tensor, save_path)
         pim = QPixmap(save_path)
         
         self._ui.ddim_scene.labels[id].setPixmap(pim)
+
         
     @pyqtSlot(str, int, torch.Tensor)
     def image_blending_update(self, src, id, imgs_tensor):
+        
         save_path = os.path.join(self.export_dir, src+str(id)+".png")
         save_image(imgs_tensor, save_path)
-        pim = QPixmap(save_path)
+        # pim = QPixmap(save_path)
         self.blending_path.append(save_path)
 
-        self._ui.blending_scene.labels[id].setPixmap(pim)   
+        # self._ui.blending_scene.labels[id].setPixmap(pim)   
 
     def _update_brush_ui(self):
         self._ui.size_slider.setValue(self._ui.paint_scene.pen_size)

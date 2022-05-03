@@ -44,6 +44,8 @@ class Ui_MainWindow(object):
         self.ddim_label = QtWidgets.QLabel("Diffusion Results")
         self.ddim_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         self.ddim_label.setFont(QtGui.QFont("AnyStyle", 24))
+        self.ddim_label.setMaximumHeight(80)
+
         # ddim scene
         self.ddim_scene = DDIMPanel(args.canvas, args.width, args.height)
         # ddim panel 
@@ -59,8 +61,9 @@ class Ui_MainWindow(object):
         self.blending_label = QtWidgets.QLabel("Blending Results")
         self.blending_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         self.blending_label.setFont(QtGui.QFont("AnyStyle", 24))
+        self.blending_label.setMaximumHeight(80)
         # blending scene
-        self.blending_scene = BlendingPanel()
+        self.blending_scene = BlendingPanel(out_width = args.out_width)
         # blending panel 
         self.blending_panel = QtWidgets.QWidget()
         # blending panel layout

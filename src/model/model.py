@@ -51,7 +51,6 @@ class Model(QThread):
         self.ddim_images = []
         for id, img in enumerate(self.strokes_images):
             ddim_result = self.diffusion(img)
-            # clone = ddim_result.squeeze().cpu().clone().detach()
             self.ddim_images.append(ddim_result)
             self.ddim_changed.emit("ddim_", id, ddim_result)
 
@@ -69,7 +68,7 @@ class Model(QThread):
     # diffusion
     def diffusion(self, image):
         result_image = self.diffusion_model.inference(image,
-                                                        sample_step=2,
+                                                        sample_step=1,
                                                         total_noise_levels=300)
         return (result_image + 1) * 0.5
 
@@ -90,3 +89,9 @@ class Model(QThread):
 
         # [3, 256, 768]
         # return pred_image.squeeze().numpy()
+
+class ThreadWithResult(threading.Thread):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, *, daemon=None):
+        def function():
+            self.result = target(*args, **kwargs)
+        super().__init__(group=group, target=function, name=name, daemon=daemon)

@@ -7,17 +7,13 @@ from PyQt5.QtCore import Qt
 from PIL import Image, ImageQt
 
 class BlendingPanel(QWidget):
-    def __init__(self, count = 4, width = 256, height = 256) -> None:
+    def __init__(self, out_width = 4, width = 256, height = 256) -> None:
         super().__init__()
         self.panel_layout = QtWidgets.QHBoxLayout()
-        self.panel_layout.setAlignment(Qt.AlignCenter)
-        self.labels = []
+        self.labels = QtWidgets.QLabel()
         
-        for i in range(count*2):
-            self.labels.append(QtWidgets.QLabel())
-            self.labels[i].setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage()))
-            self.labels[i].setFixedSize(width, height)
-            self.panel_layout.addWidget(self.labels[i])
+        self.labels.setFixedSize(out_width*width, height)
+        self.panel_layout.addWidget(self.labels)
 
         self.setLayout(self.panel_layout)
     
