@@ -12,7 +12,7 @@ class Model(QThread):
     finished = pyqtSignal()
     ddim_changed = pyqtSignal(str, int, torch.Tensor)
     image_blending_changed = pyqtSignal(str, int, torch.Tensor)
-    
+
     def __init__(self):
         super().__init__()
         import time
@@ -54,7 +54,7 @@ class Model(QThread):
             # clone = ddim_result.squeeze().cpu().clone().detach()
             self.ddim_images.append(ddim_result)
             self.ddim_changed.emit("ddim_", id, ddim_result)
-            
+
         # image blending inference
         for i in range(len(self.ddim_images)):
             blending_result = self.image_blending(self.ddim_images[i], self.ddim_images[(i+1)%len(self.ddim_images)])
@@ -84,7 +84,7 @@ class Model(QThread):
 
         pred_image, *_ = self.blending_model(left_image, right_image)
         _, mid_image, _ = torch.chunk(pred_image, 3, dim=-1)
-        
+
         # [3, 256, 768]
         return mid_image
 
