@@ -57,7 +57,7 @@ class Model(QThread):
             
         # image blending inference
         for i in range(len(self.ddim_images)):
-            blending_result = self.image_blending(self.ddim_images[i], self.ddim_images[(i+1)%4])
+            blending_result = self.image_blending(self.ddim_images[i], self.ddim_images[(i+1)%len(self.ddim_images)])
             # 0, 2, 4, 6
             self.image_blending_changed.emit("blending_", 2*i, self.ddim_images[i])
             # 1, 3, 5, 7
@@ -68,11 +68,13 @@ class Model(QThread):
 
     # diffusion
     def diffusion(self, image):
-        result_image = self.diffusion_model.inference(image)
-        return result_image
+        result_image = self.diffusion_model.inference(image,
+                                                        sample_step=2,
+                                                        total_noise_levels=300)
+        return (result_image + 1) * 0.5
 
         # [batch_size, 3, 256, 256]
-        # return self.diffusion_model.inference(images).numpy()
+        # return self.diffusion_model.inference(images, sample_step=2, total_noise_levels=300).numpy()
 
     # image_blending
     def image_blending(self, left_image, right_image):
